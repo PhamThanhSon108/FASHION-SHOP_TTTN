@@ -8,8 +8,10 @@ import { createProductReview, listProductDetails } from '../Redux/Actions/Produc
 import Loading from '../components/LoadingError/Loading';
 import { PRODUCT_CREATE_REVIEW_RESET } from '../Redux/Constants/ProductConstants';
 import moment from 'moment';
-import { addToCart } from '../Redux/Actions/cartActions';
+import { addProductOrderInCart, addToCart } from '../Redux/Actions/cartActions';
 import image from '~/assets/images';
+import Toast from '~/components/LoadingError/Toast';
+import useDebounce from '~/hooks/useDebounce';
 
 const SingleProduct = ({ history, match }) => {
     const [qty, setQty] = useState(1);
@@ -21,6 +23,8 @@ const SingleProduct = ({ history, match }) => {
     const productId = match.params.id;
     const dispatch = useDispatch();
 
+    const deBounce = useDebounce(qty, 500);
+    const [currentQty, setCurrentQty] = useState(1);
     const productDetails = useSelector((state) => state.productDetails);
     const { loading, error, product } = productDetails;
     const userLogin = useSelector((state) => state.userLogin);
@@ -43,15 +47,21 @@ const SingleProduct = ({ history, match }) => {
             return sizes;
         }, []) || [];
 
-    const defaultVariants = defaultSize?.map((value, index) =>
-        product.variants.reduce(
-            (variants, variant, i) => {
-                if (variant.size === value) variants = { field: [...variants.field, variant] };
-                return variants;
-            },
-            { field: [] },
-        ),
-    );
+    // const defaultVariants = defaultSize?.map((value, index) =>
+    //     product.variants.reduce(
+    //         (variants, variant, i) => {
+    //             if (variant.size === value) variants = { field: [...variants.field, variant] };
+    //             return variants;
+    //         },
+    //         { field: [] },
+    //     ),
+    // );
+
+    useEffect(() => {
+        if (!qty) setQty(null);
+        if (qty > quantity) setQty(quantity);
+        else if (qty <= 0) setQty(1);
+    }, [deBounce]);
 
     const quantity = product?.variants?.find(
         (value) => value.color == currentColor && value.size == currentSize,
@@ -68,22 +78,51 @@ const SingleProduct = ({ history, match }) => {
 
     const AddToCartHandle = (e) => {
         e.preventDefault();
-        if (userInfo) {
-            dispatch(addToCart(productId, qty, userInfo._id));
-            history.push(`/cart/${productId}?qty=${qty}`);
+
+        const variantId = product?.variants?.find(
+            (value) => value.color == currentColor && value.size == currentSize,
+        )._id;
+
+        if (userInfo && variantId) {
+            dispatch(addToCart(variantId, qty, history));
+        } else history.push('/login');
+    };
+
+    const BuyProductHandle = (e) => {
+        e.preventDefault();
+        const variantOrder = product?.variants?.find(
+            (value) => value.color == currentColor && value.size == currentSize,
+        );
+        if (userInfo && variantOrder) {
+            dispatch(
+                addProductOrderInCart([
+                    {
+                        quantity: qty,
+                        variant: {
+                            ...variantOrder,
+                            product: { ...product, variants: product?.variants?.map((value) => value._id) },
+                        },
+                    },
+                ]),
+            );
+            history.push('/login?redirect=shipping');
         } else history.push('/login');
     };
     const submitHandler = (e) => {
         e.preventDefault();
         dispatch(
-            createProductReview(productId, {
-                rating,
-                comment,
+            createProductReview({
+                productId,
+                review: {
+                    rating,
+                    comment,
+                },
             }),
         );
     };
     return (
         <>
+            <Toast />
             <Header />
             <div className="container single-product">
                 {loading ? (
@@ -159,7 +198,6 @@ const SingleProduct = ({ history, match }) => {
                                                             <button
                                                                 onClick={() => {
                                                                     setCurrentSize(value);
-                                                                    console.log('active');
                                                                 }}
                                                                 className={`btn text-md-start btn__product-option ${
                                                                     value === currentSize && 'active'
@@ -197,15 +235,23 @@ const SingleProduct = ({ history, match }) => {
                                                                 <i
                                                                     class="far fa-minus input-quantity icon"
                                                                     onClick={() => {
-                                                                        if (qty >= 1) setQty((qty) => qty - 1);
+                                                                        if (qty >= 2) setQty((qty) => qty - 1);
                                                                     }}
                                                                 ></i>
                                                                 <input
-                                                                    class="input-quantity"
-                                                                    type="text"
-                                                                    role="spinbutton"
-                                                                    aria-valuenow={1}
-                                                                    value={qty}
+                                                                    class="input-quantity remove-arrow-input"
+                                                                    type="number"
+                                                                    // role="spinbutton"
+                                                                    // aria-valuemax={quantity}
+                                                                    value={parseInt(qty)}
+                                                                    onKeyDown={(evt) =>
+                                                                        [('e', 'E', '+', '-')].includes(evt.key) &&
+                                                                        evt.target.startWith(0) &&
+                                                                        evt.preventDefault()
+                                                                    }
+                                                                    onChange={(e) => {
+                                                                        setQty(parseInt(e.target.value));
+                                                                    }}
                                                                 ></input>
                                                                 <i
                                                                     class="far fa-plus input-quantity icon"
@@ -226,9 +272,24 @@ const SingleProduct = ({ history, match }) => {
                                                                 products available
                                                             </div>
                                                         </div>
-                                                        <button onClick={AddToCartHandle} className="round-black-btn">
-                                                            Add To Cart
-                                                        </button>
+                                                        <div
+                                                            className="d-flex"
+                                                            style={{ marginTop: '10px', marginLeft: '25px' }}
+                                                        >
+                                                            <button
+                                                                onClick={AddToCartHandle}
+                                                                style={{ marginRight: '15px' }}
+                                                                className="col-4 btn btn-outline-danger"
+                                                            >
+                                                                Add To Cart
+                                                            </button>
+                                                            <button
+                                                                onClick={BuyProductHandle}
+                                                                className="col-2 btn btn-primary"
+                                                            >
+                                                                Buy product
+                                                            </button>
+                                                        </div>
                                                     </>
                                                 ) : null}
                                             </div>
@@ -283,9 +344,9 @@ const SingleProduct = ({ history, match }) => {
                                             <h6 className="write-review">WRITE A CUSTOMER REVIEW</h6>
                                             <div className="my-4">
                                                 {loadingCreateReview && <Loading />}
-                                                {errorCreateReview && (
+                                                {/* {errorCreateReview && (
                                                     <Message variant="alert-danger">{errorCreateReview}</Message>
-                                                )}
+                                                )} */}
                                             </div>
                                             {userInfo ? (
                                                 <form onSubmit={submitHandler}>

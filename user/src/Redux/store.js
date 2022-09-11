@@ -7,7 +7,13 @@ import {
     productListReducer,
     productListAllReducer,
 } from './Reducers/ProductReducers';
-import { cartReducer, CreateCartReducer, DeleteCartReducer } from './Reducers/CartReducers';
+import {
+    CartOrderReducer,
+    cartReducer,
+    CreateCartReducer,
+    DeleteCartReducer,
+    UpdateCartReducer,
+} from './Reducers/CartReducers';
 import {
     forgotPasswordReducer,
     resetPasswordReducer,
@@ -19,6 +25,7 @@ import {
 import {
     orderAddressMyReducer,
     orderCancelReducer,
+    orderConfirmPaidReducer,
     orderCreateReducer,
     orderDetailsReducer,
     orderListMyReducer,
@@ -37,24 +44,33 @@ const reducer = combineReducers({
     cart: cartReducer,
     cartCreate: CreateCartReducer,
     cartDelete: DeleteCartReducer,
+    cartUpdate: UpdateCartReducer,
+    cartOrder: CartOrderReducer,
+
     userLogin: userLoginReducer,
     userRegister: userRegisterReducer,
     userDetails: userDetailsReducer,
     userUpdateProfile: userUpdateProfileReducer,
     forgotPassword: forgotPasswordReducer,
     resetPassword: resetPasswordReducer,
+
     orderCreate: orderCreateReducer,
     orderDetails: orderDetailsReducer,
     orderAddress: orderAddressMyReducer,
     orderPay: orderPayReducer,
     orderListMy: orderListMyReducer,
     orderCancel: orderCancelReducer,
+    orderConfirmPaid: orderConfirmPaidReducer,
     sliderLoad: Sliderload,
     CategoryList: categoryListReducer,
 });
 
 const cartItemsFromLocalStorage = localStorage.getItem('cartItems')
     ? JSON.parse(localStorage.getItem('cartItems'))
+    : [];
+
+const cartOrderItemsFromLocalStorage = localStorage.getItem('cartOrderItems')
+    ? JSON.parse(localStorage.getItem('cartOrderItems'))
     : [];
 
 // login
@@ -69,6 +85,10 @@ const initialState = {
     cart: {
         cartItems: [],
         shippingAddress: [],
+    },
+    cartOrder: {
+        cartOrderItems: cartOrderItemsFromLocalStorage,
+        shippingAddress: shippingAddressFromLocalStorage,
     },
     userLogin: { userInfo: userInfoFromLocalStorage },
 };

@@ -7,39 +7,40 @@ import { useDispatch, useSelector } from 'react-redux';
 import { listProducts } from '../../Redux/Actions/ProductActions';
 
 const Main = () => {
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
-    const orderList = useSelector((state) => state.orderList);
-    const { loading, error, orders } = orderList;
-    const productList = useSelector((state) => state.productList);
-    const { countProducts } = productList;
-    const userList = useSelector((state) => state.userList);
-    const { users } = userList;
-    useEffect(() => {
-        dispatch(listProducts());
-    }, [dispatch]);
-    return (
-        <>
-            <section className="content-main">
-                <div className="content-header">
-                    <h2 className="content-title"> Dashboard </h2>
-                </div>
-                {/* Top Total */}
-                <TopTotal orders={orders} countProducts={countProducts} countUsers={users ? users.length : 0} />
+  const orderList = useSelector((state) => state.orderList);
+  const { loading, error, orders } = orderList;
+  const productList = useSelector((state) => state.productList);
+  const { products, countProducts } = productList;
+  const userList = useSelector((state) => state.userList);
+  const { users } = userList;
+  useEffect(() => {
+    dispatch(listProducts());
+  }, [dispatch]);
 
-                <div className="row">
-                    {/* STATICS */}
-                    <SaleStatistics />
-                    <ProductsStatistics />
-                </div>
+  return (
+    <>
+      <section className="content-main">
+        <div className="content-header">
+          <h2 className="content-title"> Dashboard </h2>
+        </div>
+        {/* Top Total */}
+        <TopTotal orders={orders} countProducts={countProducts} countUsers={users ? users.length : 0} />
 
-                {/* LATEST ORDER */}
-                <div className="card mb-4 shadow-sm">
-                    <LatestOrder orders={orders} loading={loading} error={error} />
-                </div>
-            </section>
-        </>
-    );
+        <div className="row">
+          {/* STATICS */}
+          <SaleStatistics />
+          <ProductsStatistics />
+        </div>
+
+        {/* LATEST ORDER */}
+        <div className="card mb-4 shadow-sm">
+          <LatestOrder orders={orders} loading={loading} error={error} />
+        </div>
+      </section>
+    </>
+  );
 };
 
 export default Main;

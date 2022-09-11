@@ -1,33 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { clearFromCart, listCart } from '../Redux/Actions/cartActions';
+import { clearFromCart, listCart, listOrderCart } from '../Redux/Actions/cartActions';
 import { createOrder } from '../Redux/Actions/OrderActions';
 import { ORDER_CREATE_RESET } from '../Redux/Constants/OrderConstants';
 import Header from './../components/Header';
 import Message from './../components/LoadingError/Error';
-import PayModal from '../components/Modal/PayModal';
 import { getUserDetails } from '../Redux/Actions/userActions';
+import WrapConfirmModal from '~/components/Modal/WrapConfirmModal';
+import Toast from '~/components/LoadingError/Toast';
 
 const PlaceOrderScreen = ({ history }) => {
     window.scrollTo(0, 0);
     // const userDetails = useSelector((state) => state.userDetails);
     // const { loading, user } = userDetails;
     const dispatch = useDispatch();
-    const cart = useSelector((state) => state.cart);
-    const { cartItems } = cart;
-    const currenCartItems = cartItems
-        .filter((item) => item.isBuy == true)
-        .reduce((arr, pro) => {
-            arr.push({
-                name: pro.product.name,
-                qty: pro.qty,
-                image: pro.product.image,
-                price: pro.product.price,
-                product: pro.product._id,
-            });
-            return arr;
-        }, []);
+    const cartOrder = useSelector((state) => state.cartOrder);
+    const { cartOrderItems } = cartOrder;
+    const currenCartItems = cartOrderItems;
+    const createContent = useCallback(() => {
+        return { title: 'Place order this product?', body: 'Are you sure?' };
+    });
     const userLogin = useSelector((state) => state.userLogin);
     const { userInfo } = userLogin;
 
@@ -35,25 +28,26 @@ const PlaceOrderScreen = ({ history }) => {
     const addDecimals = (num) => {
         return (Math.round(num * 100) / 100).toFixed(2);
     };
-    console.log(cart);
-    cart.itemsPrice = addDecimals(
-        cart.cartItems
-            .filter((item) => item.isBuy == true)
-            .reduce((a, i) => a + i.qty * i.product.price, 0)
-            .toFixed(2),
+    cartOrder.itemsPrice = addDecimals(
+        cartOrder.cartOrderItems.reduce((totalPrice, i) => totalPrice + i.quantity * i.variant.price, 0).toFixed(2),
     );
-    cart.shippingPrice = addDecimals(cart.itemsPrice > 0 ? (cart.itemsPrice > 100 ? 0 : 20) : 0);
-    cart.taxPrice = addDecimals(Number((0.15 * cart.itemsPrice).toFixed(2)));
-    cart.totalPrice =
-        cart?.cartItems.length > 0
-            ? (Number(cart.itemsPrice) + Number(cart.shippingPrice) + Number(cart.taxPrice)).toFixed(2)
+    cartOrder.shippingPrice = addDecimals(cartOrder.itemsPrice > 0 ? (cartOrder.itemsPrice > 100 ? 0 : 20) : 0);
+    cartOrder.taxPrice = addDecimals(Number((0.15 * cartOrder.itemsPrice).toFixed(2)));
+    cartOrder.totalPrice =
+        cartOrder?.cartOrderItems.length > 0
+            ? (Number(cartOrder.itemsPrice) + Number(cartOrder.shippingPrice) + Number(cartOrder.taxPrice)).toFixed(2)
             : 0;
 
     const orderCreate = useSelector((state) => state.orderCreate);
     const { order, success, error } = orderCreate;
+
+    useEffect(() => {
+        dispatch(listOrderCart());
+        dispatch(listCart());
+    }, []);
     useEffect(() => {
         // dispatch(getUserDetails('profile'));
-        dispatch(listCart());
+
         if (success) {
             history.push(`/order/${order._id}`);
             dispatch({ type: ORDER_CREATE_RESET });
@@ -65,35 +59,36 @@ const PlaceOrderScreen = ({ history }) => {
         dispatch(
             createOrder({
                 orderItems: currenCartItems,
-                // shippingAddress: cart.shippingAddress,
                 shippingAddress: {
                     address: userInfo.address,
                     city: userInfo.city,
                     postalCode: '',
                     country: userInfo.country,
                 },
-                // paymentMethod: cart.paymentMethod,
+
                 paymentMethod: 'Payment in cash',
-                itemsPrice: cart.itemsPrice,
-                shippingPrice: cart.shippingPrice,
-                taxPrice: cart.taxPrice,
-                totalPrice: cart.totalPrice,
-                phone: userInfo.phone,
+                taxPrice: cartOrder.taxPrice,
+                shippingPrice: cartOrder.shippingPrice,
+                totalPrice: cartOrder.totalPrice,
+                contactInformation: {
+                    email: userInfo.email,
+                    phone: userInfo.phone,
+                },
             }),
         );
-        dispatch(clearFromCart(userInfo._id));
+        // dispatch(clearFromCart(userInfo._id));
     };
-    console.log(cart);
     return (
         <>
+            <Toast />
             <Header />
             <div className="container">
-                <PayModal
+                {/* <PayModal
                     Title="PAY"
                     Body="Do you agree to pay?"
                     HandleSubmit={placeOrderHandler}
                     Close="modal"
-                ></PayModal>
+                ></PayModal> */}
                 <div className="row  order-detail">
                     <div className="col-lg-4 col-sm-4 mb-lg-4 mb-2 mb-sm-0 fix-bottom">
                         <div className="row " style={{ display: 'flex', alignItems: 'center' }}>
@@ -129,7 +124,7 @@ const PlaceOrderScreen = ({ history }) => {
                         <div className="row" style={{ display: 'flex', alignItems: 'center' }}>
                             <div className="col-lg-3 col-sm-3 mb-lg-3 center fix-bottom">
                                 <div className="alert-success order-box fix-none">
-                                    <i class="fab fa-paypal"></i>
+                                    <i class="fab fa-pa"></i>
                                 </div>
                             </div>
                             <div className="col-lg-9 col-sm-9 mb-lg-9">
@@ -143,67 +138,94 @@ const PlaceOrderScreen = ({ history }) => {
 
                 <div className="row order-products justify-content-between">
                     <div className="col-lg-12 fix-padding cart-scroll">
-                        {cart.cartItems.length === 0 ? (
+                        {cartOrder.cartOrderItems.length === 0 ? (
                             <Message variant="alert-info mt-5">No product is selected</Message>
                         ) : (
                             <>
-                                {cart.cartItems
-                                    .filter((item) => item.isBuy == true)
-                                    .map((item, index) => (
-                                        <div className="order-product row" key={index}>
-                                            <div className="col-md-3 col-6">
-                                                <img src={item.product.image} alt={item.name} />
-                                            </div>
-                                            <div className="col-md-5 col-6 d-flex align-items-center">
-                                                <Link to={`/product/${item.product}`}>
-                                                    <h6>{item.product.name}</h6>
-                                                </Link>
-                                            </div>
-                                            <div className="mt-3 mt-md-0 col-md-2 col-6  d-flex align-items-center flex-column justify-content-center ">
-                                                <h4>QUANTITY</h4>
-                                                <h6>{item?.qty}</h6>
-                                            </div>
-                                            <div className="mt-3 mt-md-0 col-md-2 col-6 align-items-end  d-flex flex-column justify-content-center ">
-                                                <h4>SUBTOTAL</h4>
-                                                <h6>${item?.qty * item?.product?.price}</h6>
-                                            </div>
+                                {cartOrder.cartOrderItems.map((item, index) => (
+                                    <div className="order-product row" key={index}>
+                                        <div className="col-md-3 col-3" style={{ width: '20%' }}>
+                                            <img
+                                                className="col-md-3 col-3"
+                                                src={item.variant.product.image}
+                                                alt={item.variant.product.name}
+                                            />
                                         </div>
-                                    ))}
+                                        <div className="col-md-5 col-5 d-flex align-items-center">
+                                            <Link to={`/product/${item.variant.product._id}`}>
+                                                <h6>{item.variant.product.name}</h6>
+                                            </Link>
+                                        </div>
+                                        <div className="mt-3 mt-md-0 col-md-1 col-1  d-flex align-items-center flex-column justify-content-center ">
+                                            <h4>Size</h4>
+                                            <h6>{item?.variant?.size}</h6>
+                                        </div>
+                                        <div className="mt-3 mt-md-0 col-md-1 col-1  d-flex align-items-center flex-column justify-content-center ">
+                                            <h4>Color</h4>
+                                            <h6>{item?.variant?.color}</h6>
+                                        </div>
+                                        <div className="mt-3 mt-md-0 col-md-1 col-1  d-flex align-items-center flex-column justify-content-center ">
+                                            <h4>QUANTITY</h4>
+                                            <h6>{item?.quantity}</h6>
+                                        </div>
+                                        <div className="mt-3 mt-md-0 col-md-1 col-1 align-items-end  d-flex flex-column justify-content-center ">
+                                            <h4>SUBTOTAL</h4>
+                                            <h6>${item?.quantity * item?.variant?.price}</h6>
+                                        </div>
+                                    </div>
+                                ))}
                             </>
                         )}
                     </div>
                 </div>
-                <div className="row" style={{ padding: '10px 0', backgroundColor: '#fff', marginTop: '10px' }}>
+                <div className="row d-flex" style={{ padding: '10px 0', backgroundColor: '#fff', marginTop: '10px' }}>
                     {/* total */}
-                    <div className="col-lg-12 d-flex align-items-end flex-column subtotal-order">
-                        <table className="table fix-bottom">
+                    <div className="col-9 d-flex align-items-end flex-column subtotal-order">
+                        <table className="table table-bordered fix-bottom">
                             <tbody>
                                 <tr>
                                     <td>
                                         <strong>Products</strong>
                                     </td>
-                                    <td>${cart.itemsPrice}</td>
+                                    <td>${cartOrder.itemsPrice}</td>
                                     <td>
                                         <strong>Tax</strong>
                                     </td>
-                                    <td>${cart.taxPrice}</td>
+                                    <td>${cartOrder.taxPrice}</td>
                                 </tr>
                                 <tr>
                                     <td>
                                         <strong>Shipping</strong>
                                     </td>
-                                    <td>${cart.shippingPrice}</td>
+                                    <td>${cartOrder.shippingPrice}</td>
 
                                     <td>
                                         <strong>Total</strong>
                                     </td>
-                                    <td>${cart.totalPrice}</td>
+                                    <td>${cartOrder.totalPrice}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
+                    <div className="col-3 d-flex justify-content-center align-content-center flex-column ">
+                        <div style={{ fontWeight: '600', height: '50%', textAlign: 'center', lineHeight: '2.5rem' }}>
+                            Total: ${cartOrder.totalPrice}
+                        </div>
+                        {cartOrder.cartOrderItems.length === 0 ? null : (
+                            <WrapConfirmModal content={createContent()} handleSubmit={placeOrderHandler}>
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary pay-button col-12"
+                                    style={{ height: '100%' }}
+                                >
+                                    PLACE ORDER
+                                </button>
+                            </WrapConfirmModal>
+                        )}
+                    </div>
                 </div>
-                <div
+                {/* <div
                     className="row"
                     style={{ padding: '10px 0', backgroundColor: '#fff', marginTop: '10px', marginBottom: '30px' }}
                 >
@@ -212,22 +234,7 @@ const PlaceOrderScreen = ({ history }) => {
                             <Message variant="alert-danger">{error}</Message>
                         </div>
                     )}
-                    <div className="col-lg-12 fix-right">
-                        <div style={{ fontWeight: '600', paddingRight: '10px' }}>Total: ${cart.totalPrice}</div>
-                        {cart.cartItems.length === 0 ? null : (
-                            <button
-                                type="submit"
-                                //onClick={placeOrderHandler}
-                                // type="button"
-                                class="btn btn-primary pay-button"
-                                data-bs-toggle="modal"
-                                data-bs-target="#staticBackdrop"
-                            >
-                                PLACE ORDER
-                            </button>
-                        )}
-                    </div>
-                </div>
+                </div> */}
             </div>
         </>
     );

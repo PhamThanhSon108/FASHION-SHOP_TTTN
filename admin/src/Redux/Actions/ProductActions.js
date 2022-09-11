@@ -90,43 +90,72 @@ export const deleteProduct = (id) => async (dispatch, getState) => {
 };
 
 // CREATE PRODUCT
-export const createProduct =
-  ({ name, description, category, image, variants }) =>
-  async (dispatch, getState) => {
-    try {
-      dispatch({ type: PRODUCT_CREATE_REQUEST });
+// export const createProduct =
+//   ({ name, description, category, image, variants }) =>
+//   async (dispatch, getState) => {
+//     try {
+//       dispatch({ type: PRODUCT_CREATE_REQUEST });
 
-      const {
-        userLogin: { userInfo },
-      } = getState();
+//       const {
+//         userLogin: { userInfo },
+//       } = getState();
+//       const config = {
+//         headers: {
+//           Authorization: `Bearer ${userInfo.accessToken}`,
+//           // 'content-type': 'multipart/form-data',
+//         },
+//       };
 
-      const config = {
-        headers: {
-          Authorization: `Bearer ${userInfo.accessToken}`,
-        },
-      };
+//       const { data } = await request.post(`/api/product/`, { name, description, category, image, variants }, config);
 
-      const { data } = await request.post(`/api/product/`, { name, description, category, image, variants }, config);
+//       dispatch({ type: PRODUCT_CREATE_SUCCESS, payload: data });
+//     } catch (error) {
+//       const message = error.response && error.response.data.message ? error.response.data.message : error.message;
+//       if (message === 'Not authorized, token failed') {
+//         dispatch(logout());
+//       }
+//       dispatch({
+//         type: PRODUCT_CREATE_FAIL,
+//         payload: message,
+//       });
+//     }
+//   };
 
-      dispatch({ type: PRODUCT_CREATE_SUCCESS, payload: data });
-    } catch (error) {
-      const message = error.response && error.response.data.message ? error.response.data.message : error.message;
-      if (message === 'Not authorized, token failed') {
-        dispatch(logout());
-      }
-      dispatch({
-        type: PRODUCT_CREATE_FAIL,
-        payload: message,
-      });
+// CREATE PRODUCT
+export const createProduct = (newProduct) => async (dispatch, getState) => {
+  try {
+    dispatch({ type: PRODUCT_CREATE_REQUEST });
+
+    const {
+      userLogin: { userInfo },
+    } = getState();
+    const config = {
+      headers: {
+        Authorization: `Bearer ${userInfo.accessToken}`,
+        // 'content-type': 'multipart/form-data',
+      },
+    };
+
+    const { data } = await request.post(`/api/product/`, newProduct, config);
+    toast.success('Add product success', ToastObjects);
+    dispatch({ type: PRODUCT_CREATE_SUCCESS, payload: data });
+  } catch (error) {
+    const message = error.response && error.response.data.message ? error.response.data.message : error.message;
+    toast.success(message, ToastObjects);
+    if (message === 'Not authorized, token failed') {
+      dispatch(logout());
     }
-  };
-
+    dispatch({
+      type: PRODUCT_CREATE_FAIL,
+      payload: message,
+    });
+  }
+};
 // EDIT PRODUCT
 export const editProduct = (id) => async (dispatch) => {
   try {
     dispatch({ type: PRODUCT_EDIT_REQUEST });
     const { data } = await request.get(`/api/product/${id}`);
-    console.log(data, 'edit succees');
     dispatch({ type: PRODUCT_EDIT_SUCCESS, payload: data });
   } catch (error) {
     const message = error.response && error.response.data.message ? error.response.data.message : error.message;
@@ -156,12 +185,14 @@ export const updateProduct = (product) => async (dispatch, getState) => {
       },
     };
 
-    const { data } = await request.put(`/api/product/${product._id}`, product, config);
-
+    const { data } = await request.put(`/api/product/${product.get('_id')}`, product, config);
+    toast.success('Success update', ToastObjects);
     dispatch({ type: PRODUCT_UPDATE_SUCCESS });
     // dispatch({ type: PRODUCT_EDIT_SUCCESS, payload: data });
   } catch (error) {
     const message = error.response && error.response.data.message ? error.response.data.message : error.message;
+    toast.error(message, ToastObjects);
+
     if (message === 'Not authorized, token failed') {
       dispatch(logout());
     }

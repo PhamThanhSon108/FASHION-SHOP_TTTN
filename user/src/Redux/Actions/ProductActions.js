@@ -14,6 +14,8 @@ import {
 } from '../Constants/ProductConstants';
 import { logout } from './userActions';
 import request from '../../utils/request';
+import { toast } from 'react-toastify';
+import { Toastobjects } from '~/components/LoadingError/Toast';
 
 // PRODUCT LIST ALL
 export const ListProductAll = () => async (dispatch) => {
@@ -31,13 +33,13 @@ export const ListProductAll = () => async (dispatch) => {
 
 // PRODUCT LIST
 export const listProduct =
-    (category = '', keyword = '', pageNumber = '', rating = '', minPrice = '', maxPrice = '', sortProducts = '1') =>
+    (category = '', keyword = '', pageNumber = '', rating = '', minPrice = '', maxPrice = '', priceOrder = '') =>
     async (dispatch) => {
         try {
             dispatch({ type: PRODUCT_LIST_REQUEST });
             const { data } = await request.get(
-                `/api/product?&category=${category}&keyword=${keyword}&pageNumber=${pageNumber}&rating=${rating}
-        &minPrice=${minPrice}&maxPrice=${maxPrice}&sortProducts=${sortProducts}`,
+                `/api/product?category=${category}&keyword=${keyword}&pageNumber=${pageNumber}&rating=${rating}
+        &minPrice=${minPrice}&maxPrice=${maxPrice}&priceOrder=${priceOrder}`,
             );
             dispatch({ type: PRODUCT_LIST_SUCCESS, payload: data });
         } catch (error) {
@@ -63,31 +65,37 @@ export const listProductDetails = (id) => async (dispatch) => {
 };
 
 // PRODUCT REVIEW CREATE
-export const createProductReview = (productId, review) => async (dispatch, getState) => {
-    try {
-        dispatch({ type: PRODUCT_CREATE_REVIEW_REQUEST });
+export const createProductReview =
+    ({ productId, review, onHide }) =>
+    async (dispatch, getState) => {
+        try {
+            dispatch({ type: PRODUCT_CREATE_REVIEW_REQUEST });
 
-        const {
-            userLogin: { userInfo },
-        } = getState();
+            const {
+                userLogin: { userInfo },
+            } = getState();
 
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${userInfo.accessToken}`,
-            },
-        };
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${userInfo.accessToken}`,
+                },
+            };
 
-        await request.post(`/api/product/${productId}/review`, review, config);
-        dispatch({ type: PRODUCT_CREATE_REVIEW_SUCCESS });
-    } catch (error) {
-        const message = error.response && error.response.data.message ? error.response.data.message : error.message;
-        if (message === 'Not authorized, token failed') {
-            dispatch(logout());
+            await request.post(`/api/product/${productId}/review`, review, config);
+            onHide && onHide('displayBasic');
+            toast.success('Successful review', Toastobjects);
+            dispatch({ type: PRODUCT_CREATE_REVIEW_SUCCESS });
+        } catch (error) {
+            const message = error.response && error.response.data.message ? error.response.data.message : error.message;
+            toast.error(message, Toastobjects);
+
+            if (message === 'Not authorized, token failed') {
+                dispatch(logout());
+            }
+            dispatch({
+                type: PRODUCT_CREATE_REVIEW_FAIL,
+                payload: message,
+            });
         }
-        dispatch({
-            type: PRODUCT_CREATE_REVIEW_FAIL,
-            payload: message,
-        });
-    }
-};
+    };

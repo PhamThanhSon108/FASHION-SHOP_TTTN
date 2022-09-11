@@ -63,14 +63,14 @@ export const logout = () => (dispatch) => {
     try {
         setTimeout(() => {
             dispatch({ type: USER_LOGIN_REQUEST });
-        }, 2000);
+        }, 100);
         setTimeout(() => {
             localStorage.removeItem('userInfo');
             dispatch({ type: USER_LOGOUT });
             dispatch({ type: USER_DETAILS_RESET });
             dispatch({ type: ORDER_LIST_MY_RESET });
             dispatch({ type: CART_LIST_MY_RESET });
-        }, 3000);
+        }, 500);
     } catch (error) {
         toast.error(
             error.response && error.response.data.message ? error.response.data.message : error.message,
@@ -252,7 +252,7 @@ export const getUserDetails = (id) => async (dispatch, getState) => {
 };
 
 // UPDATE PROFILE
-export const updateUserProfile = (user) => async (dispatch, getState) => {
+export const updateUserProfile = (user, history) => async (dispatch, getState) => {
     try {
         dispatch({ type: USER_UPDATE_PROFILE_REQUEST });
 
@@ -268,10 +268,10 @@ export const updateUserProfile = (user) => async (dispatch, getState) => {
         };
 
         const { data } = await request.put(`/api/user/profile`, user, config);
-        console.log(data, 'updateprofile');
+        if (data && history) history.push('/payment');
+        if (!history) toast.success('Profile Updated', Toastobjects);
         dispatch({ type: USER_UPDATE_PROFILE_SUCCESS, payload: { ...data, accessToken: userInfo.accessToken } });
         dispatch({ type: USER_LOGIN_SUCCESS, payload: { ...data, accessToken: userInfo.accessToken } });
-        toast.success('Profile Updated', Toastobjects);
         localStorage.setItem('userInfo', JSON.stringify({ ...data, accessToken: userInfo.accessToken }));
     } catch (error) {
         const message = error.response && error.response.data.message ? error.response.data.message : error.message;
