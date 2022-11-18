@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useForm } from 'react-hook-form';
 
 import { FileUploadDemo } from './UploadImage';
+import CropImage from './cropimage';
 
 const ToastObjects = {
   pauseOnFocusLoss: false,
@@ -119,8 +120,22 @@ const AddProductMain = () => {
     return true;
   };
 
+  const checkSameValue = (arrValue) => {
+    return (
+      arrValue?.length ==
+      arrValue.reduce((newArr, item, index) => {
+        if (!newArr?.includes(item)) newArr?.push(item);
+        return newArr;
+      }, [])?.length
+    );
+  };
+
   const submitHandler = (data, e) => {
     e.preventDefault();
+    if (!checkSameValue(data.size) || !checkSameValue(data.color)) {
+      toast.error('Name of classify cannot be duplicated!!', ToastObjects);
+      return;
+    }
     if (!image) {
       toast.error('Please choose image!!', ToastObjects);
       return;
@@ -147,19 +162,8 @@ const AddProductMain = () => {
       // for (const value of newProduct.values()) {
       //   console.log(value);
       // }
-      dispatch(
-        // createProduct({
-        //   name,
-        //   description,
-        //   category,
-        //   image: image,
-        //   variants: data.variants.reduce((variants, variant) => {
-        //     variants = variants.concat(variant.field);
-        //     return variants;
-        //   }, []),
-        // }),
-        createProduct(newProduct),
-      );
+      console.log(data);
+      dispatch(createProduct(newProduct));
     }
   };
   return (
@@ -173,9 +177,9 @@ const AddProductMain = () => {
             </Link>
             <h2 className="content-title">Add product</h2>
             <div>
-              <button type="submit" className="btn btn-primary color-orange">
+              {/* <button type="submit" className="btn btn-primary color-orange">
                 Add Product
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -265,35 +269,20 @@ const AddProductMain = () => {
                     <p className="product_validate">{validate.description}</p>
                   </div>
                   <div className="mb-4">
-                    {/* <label className="form-label">Images</label> */}
-                    {/* {image && <img src={URL.createObjectURL(image)} />} */}
-                    {/* <input
-                      className={`form-control ${validate.borderRed4}`}
-                      type="text"
-                      placeholder="Enter Image URL"
-                      value={image}
-                      //required
-                      onClick={() => {
-                        setValidate((values) => {
-                          const x = { ...values };
-                          x.borderRed4 = '';
-                          x.image = '';
-                          return x;
-                        });
-                      }}
-                      onChange={(e) => setImage(e.target.value)}
-                    />
-                    <p className="product_validate">{validate.image}</p> */}
-                    {/* <input
-                      {...register('picture')}
+                    <input
+                      {...register('picture', { required: 'This field is required' })}
                       className="form-control mt-3"
                       type="file"
-                      // onChange={(e) => {
-
-                      //   setImage(e.target.files[0]);
-                      // }}
-                    /> */}
-                    <FileUploadDemo setImage={(value) => setImage(value)} name={name} clear={clear} />
+                      onChange={(e) => {
+                        setImage(e.target.files[0]);
+                      }}
+                    />
+                    {image && (
+                      <div className="d-block" style={{ paddingTop: '150px', position: 'relative' }}>
+                        <CropImage setImage={(value) => setImage(value)} image={image} />
+                      </div>
+                    )}
+                    {/* <FileUploadDemo setImage={(value) => setImage(value)} name={name} clear={clear} /> */}
                   </div>
                 </div>
               </div>
@@ -517,7 +506,7 @@ const AddProductMain = () => {
                                       {...register(`variants.${iClass1}.field.${iClass2}.quantity`, {
                                         required: 'This is required',
                                         validate: {
-                                          positive: (value) => value > 0 && value < 10000,
+                                          positive: (value) => value >= 0 && value < 10000,
                                         },
                                       })}
                                     ></input>
@@ -530,6 +519,14 @@ const AddProductMain = () => {
                       </table>
                     </div>
                   </div>
+                </div>
+              </div>
+              <div className="col-12 ">
+                {loading && <Loading />}
+                <div className="d-flex align-content-between justify-content-end ">
+                  <button type="submit" className="btn btn-primary col-5">
+                    Add product
+                  </button>
                 </div>
               </div>
             </div>

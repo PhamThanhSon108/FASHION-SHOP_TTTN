@@ -8,10 +8,11 @@ import { toast } from 'react-toastify';
 import Message from '../LoadingError/Error';
 import Loading from '../LoadingError/Loading';
 import { ListCategory } from '../../Redux/Actions/categoryActions';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { v4 as uuidv4 } from 'uuid';
 import { FileUploadDemo } from './UploadImage';
 import { Image } from 'primereact/image';
+import CropImage from './cropimage';
 
 const ToastObjects = {
   pauseOnFocusLoss: false,
@@ -32,7 +33,6 @@ const EditProductMain = (props) => {
   const [description, setDescription] = useState('');
 
   const dispatch = useDispatch();
-
   const productEdit = useSelector((state) => state.productEdit);
   const { loading, error, success: successGetProduct, product } = productEdit;
   const defaultColor =
@@ -74,6 +74,7 @@ const EditProductMain = (props) => {
     watch,
     reset,
     unregister,
+    control,
     formState: { errors, touchedFields },
   } = useForm({
     defaultValues: defaultGroupProduct,
@@ -118,9 +119,22 @@ const EditProductMain = (props) => {
       setSize(defaultSize);
     }
   }, [successGetProduct, product]);
-
+  const checkSameValue = (arrValue) => {
+    return (
+      arrValue?.length ===
+      arrValue.reduce((newArr, item, index) => {
+        if (!newArr?.includes(item)) newArr?.push(item);
+        return newArr;
+      }, [])?.length
+    );
+  };
   const submitHandler = (data, e) => {
+    console.log(data);
     e.preventDefault();
+    if (!checkSameValue(data.color) || !checkSameValue(data.size)) {
+      toast.error('Name of classify cannot be duplicated!!', ToastObjects);
+      return;
+    }
     if (category != -1) {
       let newProduct = new FormData();
       newProduct.append('_id', productId);
@@ -156,7 +170,7 @@ const EditProductMain = (props) => {
 
   return (
     <>
-      {/* <Toast /> */}
+      <Toast />
       <section className="content-main" style={{ maxWidth: '1200px' }}>
         <form onSubmit={handleSubmit(submitHandler)}>
           <div className="content-header">
@@ -164,18 +178,13 @@ const EditProductMain = (props) => {
               Go to products
             </Link>
             <h2 className="content-title">Update Product</h2>
-            <div>
-              <button type="submit" className="btn btn-primary">
-                Update now
-              </button>
-            </div>
           </div>
 
           <div className="row mb-4">
             <div className="col-xl-12 col-lg-12">
               <div className="card mb-4 shadow-sm">
                 <div className="card-body">
-                  {loadingUpdate && <Loading />}
+                  {/* {loadingUpdate && <Loading />} */}
                   {loading ? (
                     <Loading />
                   ) : error ? (
@@ -253,23 +262,30 @@ const EditProductMain = (props) => {
                             return (
                               <>
                                 <div className="mb-4 d-flex" key={uuidv4()}>
-                                  <div className="col-3">{index == 0 ? 'Size' : 'Color'}</div>
-                                  <div className="card-body shadow-sm col-9">
+                                  <div className="col-1 col-md-2">{index == 0 ? 'Size' : 'Color'}</div>
+                                  <div className="card-body shadow-sm col-11">
                                     {getValues(valueOption)?.map((valueField, i) => (
-                                      <div className="mb-4 d-flex" key={uuidv4()}>
-                                        <label className="col-2 text-start ">Phân loại hàng</label>
+                                      <div className="col-mb-11 d-flex" key={uuidv4()} style={{ marginTop: '15px' }}>
+                                        <label className="col-2 text-start ">Name of classify</label>
                                         <div className="col-10 d-flex">
-                                          <input
+                                          {/* <input
                                             {...register(`${valueOption}.${i}`, {
                                               required: 'This is required',
                                             })}
                                             className="flex-grow-1 form-control"
                                             name={`${valueOption}.${i}`}
                                             type="text"
-                                            placeholder="Nhập tên nhóm phân loại"
+                                            placeholder="Enter name of classify"
                                             aria-label="Price"
                                             aria-describedby="basic-addon1"
-                                          ></input>{' '}
+                                          ></input>{' '} */}
+                                          <Controller
+                                            control={control}
+                                            name={`${valueOption}.${i}`}
+                                            render={({ field }) => (
+                                              <input {...field} required className="flex-grow-1 form-control" />
+                                            )}
+                                          />
                                           {getValues(valueOption).length > 1 && (
                                             <span
                                               onClick={() => {
@@ -442,24 +458,26 @@ const EditProductMain = (props) => {
                                           <td className="col-3">{value2 || '?'}</td>
                                           <td className="col-3">
                                             <input
+                                              type="number"
                                               className=""
                                               placeholder="Enter price"
                                               {...register(`variants.${iClass1}.field.${iClass2}.price`, {
                                                 required: 'This is required',
                                                 validate: {
-                                                  positive: (value) => value > 0 && value < 10000,
+                                                  positive: (value) => value >= 0 && value < 10000,
                                                 },
                                               })}
                                             ></input>
                                           </td>
                                           <td className="col-3">
                                             <input
+                                              type="number"
                                               className="flex-grow-1"
                                               placeholder="Enter quantity"
                                               {...register(`variants.${iClass1}.field.${iClass2}.quantity`, {
                                                 required: 'This is required',
                                                 validate: {
-                                                  positive: (value) => value > 0 && value < 10000,
+                                                  positive: (value) => value >= 0 && value < 10000,
                                                 },
                                               })}
                                             ></input>
@@ -476,6 +494,14 @@ const EditProductMain = (props) => {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+              <div className="col-12 ">
+                {loadingUpdate && <Loading />}
+                <div className="d-flex align-content-between justify-content-end">
+                  <button type="submit" className="btn btn-primary col-5">
+                    Update now
+                  </button>
                 </div>
               </div>
             </div>
